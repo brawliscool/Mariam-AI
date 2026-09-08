@@ -11,19 +11,25 @@ app.use(express.json({ limit: "45mb" }));
 app.use(express.static("."));
 
 function systemPrompt(mode) {
-  const common = `You are Study Spark, a careful tutor for a U.S. high-school junior.
-Read every attached image carefully and use all pages together when relevant.
-Never invent unreadable text. If something necessary cannot be read, state exactly what is unreadable instead of guessing.
-If the image contains multiple numbered questions, answer EVERY readable numbered question completely unless the user explicitly asks for only some items.
-NEVER output placeholder text, unfinished lists, template filler, or ellipses. Never write partial entries. Every returned section must contain complete student-ready content.
-Do not create a redundant Final Answer card when an Answers card already contains the complete final answers to multiple questions.
-Return a short "thinking" field that summarizes the approach in plain language.`;
+  const common =
+    "You are Study Spark, a homework helper for a high-school student.\n" +
+    "Be extremely concise. Give only the answer needed, with no introductions, restatement, long explanations, or repeated conclusion.\n" +
+    "For multiple questions, use one compact numbered list. Aim for 1-2 short sentences or fewer than 30 words per numbered problem.\n" +
+    "For math and science, show only the essential equation or work and the result. Do not create separate formula sections unless absolutely necessary.\n" +
+    "If something is unreadable, say so briefly instead of guessing.\n" +
+    "Return a one-sentence thinking summary only; never reveal hidden chain-of-thought.";
 
-  if (mode === "answer") return `${common}\nReturn only the complete final answer(s). For multiple numbered questions, return all answers in one complete numbered Answer section. Return strict JSON with keys thinking and sections.`;
-  if (mode === "quiz") return `${common}\nCreate a multiple-choice quiz with exactly four complete options per question and one correct answer. Return strict JSON with keys thinking and quiz. No placeholders or ellipses.`;
+  if (mode === "answer") return common + "\nReturn strict JSON with thinking and one final sections item titled Answer. Give only concise final answers.";
+  if (mode === "quiz") return common + "\nCreate 5 concise multiple-choice questions with 4 short options each. Return strict JSON with thinking and quiz.";
 
-  const modeText = mode === "teach" ? "Teach clearly and explain why the steps work." : mode === "check" ? "Check the student's work, identify the first mistake, and show the corrected solution." : "Solve carefully with concise numbered reasoning.";
-  return `${common}\n${modeText}\nFor a single problem, use only useful sections from summary, optional formula, steps, final. For multiple numbered problems, prefer one complete Answers section containing every numbered answer plus Steps only if needed. Formula Used may contain only formulas actually applied to the current problem(s), tied to the question number when there are several. Never list unrelated formulas. Never add Quick Check. Return strict JSON with keys thinking and sections.`;
+  const modeText = mode === "teach"
+    ? "Teach briefly, using no more than two short sentences per item."
+    : mode === "check"
+    ? "State the mistake and correction briefly, in one or two short sentences."
+    : "Solve briefly. Show only essential work and the final result.";
+
+  return common + "\n" + modeText +
+    "\nReturn strict JSON with thinking and sections. Prefer one compact final section titled Answers containing all answers. Do not repeat answers in another section.";
 }
 
 function hasPlaceholder(value) {
@@ -72,7 +78,7 @@ app.post("/api/solve", async (req, res) => {
       const upstream = await fetch(`${BASE_URL}/chat/completions`, {
         method:"POST",
         headers:{ "Authorization":`Bearer ${API_KEY}`, "Content-Type":"application/json" },
-        body:JSON.stringify({ model:MODEL, temperature:0.12, max_tokens:attempt===0?5200:6500, response_format:{ type:"json_object" }, messages })
+        body:JSON.stringify({ model:MODEL, temperature:0.12, max_tokens:attempt===0?2400:3200, response_format:{ type:"json_object" }, messages })
       });
       const data = await upstream.json().catch(() => ({}));
       if (!upstream.ok) return res.status(upstream.status).json({ error:data?.error?.message || `DeepSeek API error (${upstream.status})` });
