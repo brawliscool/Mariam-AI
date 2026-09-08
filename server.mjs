@@ -10,25 +10,14 @@ const BASE_URL = (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com").r
 app.use(express.json({ limit: "45mb" }));
 app.use(express.static("."));
 
-const SUBJECT_PROMPTS = {
-  Math: `You are solving high-school math. Read notation, signs, exponents, fractions, radicals, graphs, labels, and units exactly. Choose the simplest valid method. Show clean algebra with one logical change per step. A Formula Used section is allowed only when a specific formula, identity, theorem, or equation is actually applied to the current problem. Never list a general formula sheet.`,
-  English: `You are helping with high-school English language arts. Determine the task type and base analysis only on supplied material. Never invent quotations, page numbers, citations, plot details, or evidence. Keep the student's intended meaning and voice.`,
-  Science: `You are helping with high-school science. Identify the actual branch and task first. For quantitative problems, identify knowns, unknowns, units, and assumptions and keep units through the work. A Formula Used section is allowed only when a formula/equation is actually required by one of the current visible questions. Never output a general science formula list. For conceptual biology, ecology, genetics, vocabulary, classification, reading, or explanation questions, omit Formula Used unless an equation is genuinely used.`,
-  History: `You are helping with high-school history and social studies. Prioritize chronology, cause and effect, context, comparison, continuity/change, and the exact wording of the question. Never fabricate quotations, dates, citations, or source details.`,
-  Other: `You are helping with a high-school assignment in another subject. Identify the discipline and use its normal conventions. Follow the assignment wording closely and never invent unreadable or missing information.`
-};
-
-function subjectPrompt(subject) { return SUBJECT_PROMPTS[subject] || SUBJECT_PROMPTS.Other; }
-
-function systemPrompt(mode, subject) {
+function systemPrompt(mode) {
   const common = `You are Study Spark, a careful tutor for a U.S. high-school junior.
 Read every attached image carefully and use all pages together when relevant.
 Never invent unreadable text. If something necessary cannot be read, state exactly what is unreadable instead of guessing.
 If the image contains multiple numbered questions, answer EVERY readable numbered question completely unless the user explicitly asks for only some items.
 NEVER output placeholder text, unfinished lists, template filler, or ellipses. Never write partial entries. Every returned section must contain complete student-ready content.
 Do not create a redundant Final Answer card when an Answers card already contains the complete final answers to multiple questions.
-Return a short "thinking" field that summarizes the approach in plain language.
-Subject-specific instructions: ${subjectPrompt(subject)}`;
+Return a short "thinking" field that summarizes the approach in plain language.`;
 
   if (mode === "answer") return `${common}\nReturn only the complete final answer(s). For multiple numbered questions, return all answers in one complete numbered Answer section. Return strict JSON with keys thinking and sections.`;
   if (mode === "quiz") return `${common}\nCreate a multiple-choice quiz with exactly four complete options per question and one correct answer. Return strict JSON with keys thinking and quiz. No placeholders or ellipses.`;
@@ -69,7 +58,7 @@ app.post("/api/solve", async (req, res) => {
     if (!question.trim() && !images.length) return res.status(400).json({ error: "Add a question or image." });
     if (!Array.isArray(images) || images.length > 10) return res.status(400).json({ error: "You can upload up to 10 images at once." });
 
-    const safeSubject = Object.prototype.hasOwnProperty.call(SUBJECT_PROMPTS, subject) ? subject : "Other";
+    const safeSubject = ["Math", "English", "Science", "History", "Other"].includes(subject) ? subject : "Other";
     const content = [{ type:"text", text:`Subject: ${safeSubject}\nStudent level: high-school junior\nRequest: ${question.trim() || "Use the attached homework images."}` }];
     for (const img of images) {
       if (typeof img !== "string" || !/^data:image\/(png|jpeg|jpg|webp|gif);base64,/i.test(img)) return res.status(400).json({ error:"Unsupported image format." });
