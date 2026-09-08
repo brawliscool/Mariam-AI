@@ -16,7 +16,6 @@ function systemPrompt(mode) {
     "Be extremely concise. Give only the answer needed, with no introductions, restatement, long explanations, or repeated conclusion.\n" +
     "For multiple questions, use one compact numbered list. Aim for 1-2 short sentences or fewer than 30 words per numbered problem.\n" +
     "For math and science, show only the essential equation or work and the result. Do not create separate formula sections unless absolutely necessary.\n" +
-    "If something is unreadable, say so briefly instead of guessing.\n" +
     "Return a one-sentence thinking summary only; never reveal hidden chain-of-thought.";
 
   if (mode === "answer") return common + "\nReturn strict JSON with thinking and one final sections item titled Answer. Give only concise final answers.";
@@ -97,11 +96,11 @@ app.post("/api/solve", async (req, res) => {
 
       messages = baseMessages.concat([
         { role:"assistant", content:raw },
-        { role:"user", content:"Your previous response was incomplete or contained placeholder/ellipsis text. Rewrite the entire answer as valid JSON. Give complete student-ready content for every readable requested item. Do not use ellipses, placeholders, unfinished numbered lists, unrelated formulas, or a redundant final card." }
+        { role:"user", content:"Your previous response was incomplete or contained placeholder/ellipsis text. Rewrite the entire answer as valid JSON. Give complete student-ready content for every requested item that is present. Do not use ellipses, placeholders, unfinished numbered lists, unrelated formulas, or a redundant final card." }
       ]);
     }
 
-    return res.status(502).json({ error:"The AI returned an incomplete answer. Please try again with a clearer photo." });
+    return res.status(502).json({ error:"The AI returned an incomplete answer. Please try again." });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error:"The server could not complete that request." });
