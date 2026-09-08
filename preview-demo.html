@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Study Spark ♡</title>
+<style>
+:root{--bg:#fff8fc;--ink:#342c38;--muted:#83778a;--pink:#ff78ab;--lav:#d8ceff;--line:#6d526f18}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 10% 5%,#ffc4db80,transparent 25%),radial-gradient(circle at 90% 5%,#d8ccff80,transparent 25%),linear-gradient(#fffafd,#fff8fc);font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,sans-serif;color:var(--ink)}
+.app{max-width:820px;margin:auto;padding:16px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.brand{display:flex;gap:9px;align-items:center;font-weight:950;font-size:1.18rem}.logo{width:42px;height:42px;border-radius:15px;display:grid;place-items:center;background:linear-gradient(145deg,#ffb5d0,#ded5ff)}.pill{font-size:.72rem;color:var(--muted);font-weight:850;background:#ffffffb8;border:1px solid var(--line);padding:9px 11px;border-radius:999px}
+.hero,.panel{background:#ffffffd8;border:1px solid #ffffffee;backdrop-filter:blur(14px);box-shadow:0 16px 40px #6c4a6d16}.hero{border-radius:30px;padding:23px 19px;margin-bottom:13px}.hero h1{font-size:clamp(1.9rem,8vw,3rem);line-height:.98;letter-spacing:-.05em;margin:0 0 8px}.hero p{margin:0;color:var(--muted);font-weight:650;line-height:1.45}
+.panel{border-radius:24px;padding:17px;margin-bottom:13px}.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px}.head h2{margin:0;font-size:.98rem}.head span{font-size:.7rem;color:var(--muted);font-weight:800}
+.modes{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.mode,.subject,.soft,.opt{border:1px solid var(--line);background:#fff;border-radius:15px;font-weight:900}.mode{padding:12px 8px;color:var(--muted);font-size:.78rem}.mode.active{background:#fff0f6;color:#a3426b;border-color:#ffc4d9}
+.subjects{display:flex;gap:8px;overflow:auto}.subject{padding:9px 12px;color:var(--muted);white-space:nowrap}.subject.active{background:#f3efff;color:#6f58b7;border-color:#d8ceff}
+.upload{position:relative;border:2px dashed #efbfd1;border-radius:22px;padding:22px;text-align:center;background:linear-gradient(135deg,#fffafd,#fbf8ff)}.upload input{position:absolute;inset:0;width:100%;height:100%;opacity:0}.upload strong{display:block}.upload small{display:block;margin-top:5px;color:var(--muted);font-weight:700}.icon{font-size:1.6rem;margin-bottom:6px}
+.strip{display:flex;gap:9px;overflow:auto;padding:10px 1px 2px}.thumb{width:90px;height:90px;flex:0 0 90px;border-radius:17px;overflow:hidden;position:relative;border:1px solid var(--line)}.thumb img{width:100%;height:100%;object-fit:cover}.thumb button{position:absolute;top:5px;right:5px;width:28px;height:28px;border:0;border-radius:10px;background:#fffffff2;font-weight:950}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}.soft{padding:11px;color:var(--ink)}
+textarea{width:100%;min-height:112px;border:1px solid var(--line);border-radius:19px;background:#fff;padding:14px 15px;resize:vertical;font:inherit;color:var(--ink);outline:none}.helper{display:flex;justify-content:space-between;margin-top:7px;color:var(--muted);font-size:.7rem;font-weight:750;gap:8px}.go{width:100%;border:0;border-radius:19px;padding:15px;margin-top:12px;background:linear-gradient(135deg,#ff6ea4,#9279e9);color:#fff;font-weight:950;font:inherit}
+.result{display:none}.result.show{display:block}.cards{display:grid;gap:10px}.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:15px}.card h3{margin:0 0 8px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:#84728c}.card .body{white-space:pre-wrap;line-height:1.58;font-weight:620}.card.final{background:linear-gradient(135deg,#fff0f6,#f3efff)}.card.final .body{font-weight:950;font-size:1.05rem}
+.quiz{display:grid;gap:12px}.q{background:#fff;border:1px solid var(--line);border-radius:18px;padding:15px}.q h3{margin:0 0 11px;font-size:.94rem;line-height:1.4}.opts{display:grid;gap:8px}.opt{padding:11px 12px;text-align:left;color:var(--ink)}.opt.correct{background:#eefbf5;border-color:#bdebd4}.opt.wrong{background:#fff0f3;border-color:#ffc7d5}.fb{margin-top:8px;font-size:.77rem;color:var(--muted);font-weight:750}.score{text-align:center;background:#f4f0ff;border-radius:15px;padding:12px;font-weight:950}.hidden{display:none!important}.note{text-align:center;color:#8e8194;font-size:.7rem;font-weight:750;padding:5px 8px}
+@media(min-width:700px){.modes{grid-template-columns:repeat(5,1fr)}.workspace{display:grid;grid-template-columns:.92fr 1.08fr;gap:13px}.workspace .panel{margin-bottom:0}}
+</style>
+</head>
+<body>
+<main class="app">
+<header class="top"><div class="brand"><div class="logo">♡</div>study spark</div><div class="pill">demo mode ✦</div></header>
+<section class="hero"><h1>homework help,<br>but actually cute.</h1><p>Upload one photo or a whole set, choose how you want help, and get a clean answer instead of a wall of AI text.</p></section>
+
+<section class="panel"><div class="head"><h2>how should I help?</h2><span>pick a mode</span></div>
+<div class="modes" id="modes">
+<button class="mode active" data-mode="solve">✨ Solve</button>
+<button class="mode" data-mode="answer">⚡ Just Answer</button>
+<button class="mode" data-mode="teach">🧠 Teach Me</button>
+<button class="mode" data-mode="check">✓ Check Work</button>
+<button class="mode" data-mode="quiz">🎯 Quiz Me</button>
+</div></section>
+
+<section class="panel"><div class="head"><h2>subject</h2><span>helps the AI focus</span></div>
+<div class="subjects" id="subjects">
+<button class="subject active" data-subject="Math">➗ Math</button>
+<button class="subject" data-subject="English">📚 English</button>
+<button class="subject" data-subject="Science">🧪 Science</button>
+<button class="subject" data-subject="History">🌎 History</button>
+<button class="subject" data-subject="Other">✿ Other</button>
+</div></section>
+
+<div class="workspace">
+<section class="panel"><div class="head"><h2>add homework photos</h2><span>multiple allowed</span></div>
+<div class="upload"><input id="files" type="file" accept="image/*" multiple><div><div class="icon">📷</div><strong>Tap to add one or more photos</strong><small>Works with worksheets, notes, textbook pages, and handwritten work.</small></div></div>
+<div id="strip" class="strip"></div>
+<div class="row"><button id="add" class="soft">＋ Add more</button><button id="clear" class="soft">Clear photos</button></div>
+</section>
+
+<section class="panel"><div class="head"><h2>what do you need?</h2><span>optional with photos</span></div>
+<textarea id="question" maxlength="5000">Solve 2x² + 7x − 4 = 0</textarea>
+<div class="helper"><span id="hint">You’ll get a clean answer with organized steps.</span><span id="count">28 / 5000</span></div>
+<button id="go" class="go">Help me with this ✨</button>
+</section>
+</div>
+
+<section class="panel result" id="result"><div class="head"><h2 id="title">your answer ♡</h2><span id="meta">Math</span></div><div id="cards" class="cards"></div><div id="quiz" class="quiz hidden"></div></section>
+<div class="note">Standalone interactive preview. The API version can use the same UI with DeepSeek Vision connected server-side.</div>
+</main>
+<script>
+(()=>{
+const state={mode:'solve',subject:'Math',images:[]},$=id=>document.getElementById(id);
+const hints={solve:'You’ll get a clean answer with organized steps.',answer:'Only the final answer — no extra explanation.',teach:'The AI explains it like a tutor.',check:'The AI finds mistakes and corrects them.',quiz:'The AI turns your homework into an interactive quiz.'};
+$('modes').addEventListener('click',e=>{const b=e.target.closest('[data-mode]');if(!b)return;state.mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('active',x===b));$('hint').textContent=hints[state.mode]});
+$('subjects').addEventListener('click',e=>{const b=e.target.closest('[data-subject]');if(!b)return;state.subject=b.dataset.subject;document.querySelectorAll('[data-subject]').forEach(x=>x.classList.toggle('active',x===b))});
+$('question').addEventListener('input',()=>{$('count').textContent=$('question').value.length+' / 5000'});
+$('add').addEventListener('click',()=>$('files').click());$('clear').addEventListener('click',()=>{state.images=[];renderImages()});
+$('files').addEventListener('change',async()=>{for(const f of [...$('files').files].slice(0,10-state.images.length)){if(!f.type.startsWith('image/'))continue;const src=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)});state.images.push(src)}$('files').value='';renderImages()});
+function renderImages(){$('strip').innerHTML=state.images.map((src,i)=>'<div class="thumb"><img src="'+src+'" alt="Homework photo '+(i+1)+'"><button data-remove="'+i+'">×</button></div>').join('')}
+$('strip').addEventListener('click',e=>{const b=e.target.closest('[data-remove]');if(!b)return;state.images.splice(Number(b.dataset.remove),1);renderImages()});
+$('go').addEventListener('click',()=>{$('meta').textContent=state.subject;$('result').classList.add('show');if(state.mode==='quiz')renderQuiz();else renderAnswer();setTimeout(()=>$('result').scrollIntoView({behavior:'smooth'}),50)});
+function renderAnswer(){$('quiz').classList.add('hidden');$('cards').classList.remove('hidden');$('title').textContent='your answer ♡';let s=[];if(state.mode==='answer'){s=[['Answer','x = 1/2 or x = −4',1]]}else if(state.mode==='teach'){s=[['Idea','Factor the quadratic into two simpler expressions.',0],['Steps','1. (2x − 1)(x + 4) = 0\n2. 2x − 1 = 0 → x = 1/2\n3. x + 4 = 0 → x = −4',0],['Final Answer','x = 1/2 or x = −4',1]]}else if(state.mode==='check'){s=[['Check','The correct factorization is (2x − 1)(x + 4).',0],['Final Answer','x = 1/2 or x = −4',1]]}else{s=[['What the problem is asking','Find every value of x that makes 2x² + 7x − 4 equal 0.',0],['Steps','1. Factor: (2x − 1)(x + 4) = 0\n2. Set each factor equal to zero.\n3. 2x − 1 = 0 → x = 1/2\n4. x + 4 = 0 → x = −4',0],['Final Answer','x = 1/2 or x = −4',1],['Quick Check','Both values make the original expression equal 0.',0]]}$('cards').innerHTML=s.map(x=>'<div class="card '+(x[2]?'final':'')+'"><h3>'+x[0]+'</h3><div class="body">'+x[1]+'</div></div>').join('')}
+function renderQuiz(){$('cards').classList.add('hidden');$('quiz').classList.remove('hidden');$('title').textContent='quiz time 🎯';const items=[{q:'What is the factored form of 2x² + 7x − 4?',o:['(2x − 1)(x + 4)','(2x + 1)(x − 4)','(x − 1)(2x + 4)','(2x − 4)(x + 1)'],a:0,e:'Multiplying (2x − 1)(x + 4) gives 2x² + 7x − 4.'},{q:'If 2x − 1 = 0, what is x?',o:['−1/2','1/2','1','2'],a:1,e:'Add 1, then divide by 2.'},{q:'If x + 4 = 0, what is x?',o:['4','−4','1/4','−1/4'],a:1,e:'Subtract 4 from both sides.'}];let answered=0,score=0;$('quiz').innerHTML=items.map((x,qi)=>'<div class="q" data-q="'+qi+'"><h3>'+(qi+1)+'. '+x.q+'</h3><div class="opts">'+x.o.map((o,oi)=>'<button class="opt" data-qi="'+qi+'" data-oi="'+oi+'">'+String.fromCharCode(65+oi)+'. '+o+'</button>').join('')+'</div><div class="fb" id="fb'+qi+'"></div></div>').join('')+'<div class="score" id="score">0 / '+items.length+' answered</div>';$('quiz').onclick=e=>{const b=e.target.closest('.opt');if(!b||b.disabled)return;const qi=Number(b.dataset.qi),oi=Number(b.dataset.oi),x=items[qi],card=$('quiz').querySelector('[data-q="'+qi+'"]');card.querySelectorAll('.opt').forEach((btn,idx)=>{btn.disabled=true;if(idx===x.a)btn.classList.add('correct')});if(oi===x.a)score++;else b.classList.add('wrong');answered++;$('fb'+qi).textContent=x.e;$('score').textContent=answered===items.length?'Score: '+score+' / '+items.length:answered+' / '+items.length+' answered'}};
+})();
+</script>
+</body>
+</html>

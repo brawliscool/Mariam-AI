@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#100d16" />
+  <title>Study Spark ♡</title>
+  <style>
+    :root{
+      --bg:#100d16;--card:rgba(28,23,37,.92);--ink:#f8f2fb;--muted:#aaa0b2;
+      --pink:#ff6ea9;--lav:#9e88ff;--mint:#7bd9b0;--line:rgba(255,255,255,.09);
+      --shadow:0 18px 46px rgba(0,0,0,.28);--r:24px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:
+      radial-gradient(circle at 10% 4%,rgba(255,77,151,.16),transparent 28%),
+      radial-gradient(circle at 91% 5%,rgba(135,105,255,.18),transparent 28%),
+      linear-gradient(180deg,#100d16,#15101c 48%,#0f0c14);
+      color:var(--ink);font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,sans-serif;min-height:100vh}
+    button,input,textarea{font:inherit} button{cursor:pointer}
+    .app{max-width:860px;margin:auto;padding:max(16px,env(safe-area-inset-top)) 14px max(28px,env(safe-area-inset-bottom))}
+    .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+    .brand{display:flex;align-items:center;gap:9px;font-weight:950;font-size:1.18rem}
+    .mark{width:40px;height:40px;border-radius:14px;background:linear-gradient(145deg,#ff6ea9,#8f7cff);display:grid;place-items:center;box-shadow:0 10px 25px rgba(255,110,169,.17)}
+    .pill{border:1px solid var(--line);background:rgba(255,255,255,.055);border-radius:999px;padding:9px 11px;font-size:.76rem;font-weight:850;color:var(--muted)}
+    .hero,.panel{background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+    .hero{border-radius:30px;padding:23px 19px;margin-bottom:14px}
+    h1{margin:0 0 7px;font-size:clamp(1.85rem,7vw,2.8rem);line-height:1;letter-spacing:-.05em}
+    .hero p{margin:0;color:var(--muted);font-weight:650;line-height:1.45}
+    .panel{border-radius:var(--r);padding:17px;margin-bottom:13px}
+    .head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:11px}
+    .head h2{font-size:1rem;margin:0;font-weight:950}.head span{font-size:.72rem;color:var(--muted);font-weight:800}
+    .modes{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+    .modes button,.subject,.soft{border:1px solid var(--line);background:#211b2a;color:var(--muted);font-weight:900;border-radius:15px}
+    .modes button{padding:12px 8px;font-size:.79rem}
+    .modes button.active{background:linear-gradient(135deg,rgba(255,110,169,.17),rgba(158,136,255,.14));color:#ffd7e8;border-color:rgba(255,110,169,.36)}
+    .subjects{display:flex;gap:8px;overflow:auto;scrollbar-width:none}.subjects::-webkit-scrollbar{display:none}
+    .subject{flex:0 0 auto;padding:9px 12px;font-size:.77rem}.subject.active{background:rgba(158,136,255,.14);color:#d9d0ff;border-color:rgba(158,136,255,.38)}
+    .upload{border:2px dashed rgba(255,110,169,.38);background:linear-gradient(135deg,rgba(255,110,169,.045),rgba(158,136,255,.055));border-radius:22px;padding:19px;text-align:center;position:relative}
+    .upload input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+    .upload .ico{font-size:1.55rem;margin-bottom:6px}.upload strong{display:block}.upload small{color:var(--muted);font-weight:700;line-height:1.35}
+    .photo-strip{display:flex;gap:9px;overflow:auto;padding:10px 1px 2px;scrollbar-width:none}.photo-strip::-webkit-scrollbar{display:none}
+    .photo{width:92px;height:92px;flex:0 0 92px;border-radius:17px;overflow:hidden;position:relative;border:1px solid var(--line);background:#19151f}
+    .photo img{width:100%;height:100%;object-fit:cover}.photo button{position:absolute;top:5px;right:5px;width:28px;height:28px;border:0;border-radius:10px;background:rgba(20,16,27,.9);color:#fff;font-weight:950}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}.soft{padding:11px 9px;color:var(--ink)}
+    textarea{width:100%;min-height:110px;resize:vertical;border:1px solid var(--line);border-radius:19px;background:#18131f;padding:14px 15px;outline:none;color:var(--ink);font-weight:650;line-height:1.5}
+    textarea::placeholder{color:#746c7d}textarea:focus{border-color:rgba(255,110,169,.55);box-shadow:0 0 0 4px rgba(255,110,169,.08)}
+    .helper{font-size:.7rem;color:var(--muted);font-weight:750;margin-top:7px;display:flex;justify-content:space-between;gap:8px}
+    .go{width:100%;margin-top:12px;border:0;border-radius:19px;padding:15px;color:#fff;background:linear-gradient(135deg,#ff5b9b,#8f75ef);font-weight:950;font-size:.98rem;box-shadow:0 12px 28px rgba(160,77,145,.25)}
+    .go:disabled{opacity:.58}.error{display:none;margin-top:9px;padding:11px 12px;border-radius:14px;background:rgba(151,44,76,.18);border:1px solid rgba(255,116,151,.26);color:#ff9db8;font-size:.8rem;font-weight:750}.error.show{display:block}
+    .thinking-box{display:none;min-height:134px;border:1px solid rgba(158,136,255,.25);background:linear-gradient(135deg,rgba(158,136,255,.10),rgba(255,110,169,.07));border-radius:19px;padding:15px;position:relative;overflow:hidden}
+    .thinking-box.show{display:block}.thinking-label{display:flex;align-items:center;gap:8px;color:#c9bcff;font-size:.74rem;font-weight:950;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+    .dot{width:8px;height:8px;border-radius:50%;background:#a58fff;box-shadow:0 0 0 0 rgba(165,143,255,.5);animation:pulse 1.35s infinite}.thinking-box.done .dot{background:#7bd9b0;animation:none}
+    .thinking-text{white-space:pre-wrap;line-height:1.55;color:#eee7f2;font-size:.88rem;font-weight:700}.thinking-sub{margin-top:10px;color:var(--muted);font-size:.7rem;font-weight:700}
+    @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(165,143,255,.42)}70%{box-shadow:0 0 0 10px rgba(165,143,255,0)}100%{box-shadow:0 0 0 0 rgba(165,143,255,0)}}
+    .result{display:none}.result.show{display:block}
+    .cards{display:grid;gap:10px}.answer-card{background:#1a1522;border:1px solid var(--line);border-radius:19px;padding:15px}
+    .answer-card h3{margin:0 0 8px;font-size:.84rem;text-transform:uppercase;letter-spacing:.05em;color:#b9a9c2}
+    .answer-card .body{white-space:pre-wrap;line-height:1.62;font-weight:600;overflow-wrap:anywhere}
+    .final-card{background:linear-gradient(135deg,rgba(255,110,169,.10),rgba(158,136,255,.11));border-color:rgba(219,172,224,.16)}.final-card .body{font-size:1.08rem;font-weight:900}
+    .quiz{display:grid;gap:12px}.qcard{background:#1a1522;border:1px solid var(--line);border-radius:19px;padding:15px}.qcard h3{margin:0 0 11px;font-size:.95rem;line-height:1.4}
+    .opts{display:grid;gap:8px}.opt{border:1px solid var(--line);border-radius:14px;background:#211a2b;padding:11px 12px;text-align:left;font-weight:800;color:var(--ink)}
+    .opt.correct{background:rgba(74,171,129,.16);border-color:rgba(123,217,176,.35)}.opt.wrong{background:rgba(183,70,103,.16);border-color:rgba(255,110,145,.32)}.opt:disabled{cursor:default}
+    .feedback{margin-top:9px;font-size:.78rem;font-weight:750;color:var(--muted);line-height:1.45}
+    .quiz-score{font-weight:950;text-align:center;background:rgba(158,136,255,.12);border-radius:16px;padding:12px}
+    .hidden{display:none!important}
+    @media(min-width:700px){.modes{grid-template-columns:repeat(5,1fr)}.work{display:grid;grid-template-columns:.92fr 1.08fr;gap:13px}.work .panel{margin-bottom:0}}
+  </style>
+</head>
+<body>
+<main class="app">
+  <header class="top"><div class="brand"><div class="mark">♡</div>study spark</div><div class="pill">homework helper ✦</div></header>
+
+  <section class="hero">
+    <h1>snap it. solve it.<br>actually understand it.</h1>
+    <p>Add one photo or a whole set of pages, then choose exactly how you want help.</p>
+  </section>
+
+  <section class="panel">
+    <div class="head"><h2>how should I help?</h2><span>5 modes</span></div>
+    <div class="modes" id="modes">
+      <button class="active" data-mode="solve">✨ Solve</button>
+      <button data-mode="answer">⚡ Just Answer</button>
+      <button data-mode="teach">🧠 Teach Me</button>
+      <button data-mode="check">✓ Check Work</button>
+      <button data-mode="quiz">🎯 Quiz Me</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="head"><h2>subject</h2><span>optional focus</span></div>
+    <div class="subjects" id="subjects">
+      <button class="subject active" data-subject="Math">➗ Math</button>
+      <button class="subject" data-subject="English">📚 English</button>
+      <button class="subject" data-subject="Science">🧪 Science</button>
+      <button class="subject" data-subject="History">🌎 History</button>
+      <button class="subject" data-subject="Other">✿ Other</button>
+    </div>
+  </section>
+
+  <div class="work">
+    <section class="panel">
+      <div class="head"><h2>add homework photos</h2><span>multiple allowed</span></div>
+      <div class="upload">
+        <input id="files" type="file" accept="image/*" multiple />
+        <div class="ico">📸</div><strong>Choose one or more images</strong>
+        <small>Worksheet pages, textbook questions, handwritten work, graphs, diagrams…</small>
+      </div>
+      <div id="photoStrip" class="photo-strip"></div>
+      <div class="row2">
+        <button class="soft" id="addMore" type="button">＋ Add more</button>
+        <button class="soft" id="clearPhotos" type="button">Clear photos</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="head"><h2 id="needTitle">what do you need?</h2><span id="needMeta">optional with photos</span></div>
+      <div id="inputArea">
+        <textarea id="question" maxlength="5000" placeholder="Example: Do questions 4–8, or quiz me on everything in these notes…"></textarea>
+        <div class="helper"><span id="modeHint">You’ll get a clean answer with organized steps.</span><span id="count">0 / 5000</span></div>
+      </div>
+      <div id="thinkingBox" class="thinking-box" aria-live="polite">
+        <div class="thinking-label"><span class="dot"></span><span id="thinkingLabel">model thinking</span></div>
+        <div id="thinkingText" class="thinking-text">Reading your request…</div>
+        <div class="thinking-sub">A concise reasoning summary appears here while the answer is prepared.</div>
+      </div>
+      <button id="go" class="go">Help me with this ✨</button>
+      <div id="error" class="error"></div>
+    </section>
+  </div>
+
+  <section class="panel result" id="result">
+    <div class="head"><h2 id="resultTitle">your answer ♡</h2><span id="resultMeta"></span></div>
+    <div id="cards" class="cards"></div>
+    <div id="quiz" class="quiz hidden"></div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const state={mode:'solve',subject:'Math',images:[]};
+  const $=id=>document.getElementById(id);
+  const modeHints={
+    solve:'You’ll get a clean answer with organized steps.',
+    answer:'Only the final answer — no extra explanation.',
+    teach:'The AI will explain it like a tutor.',
+    check:'The AI will find mistakes and correct them.',
+    quiz:'The AI will turn your photos/text into an interactive quiz.'
+  };
+
+  $('modes').addEventListener('click',e=>{
+    const b=e.target.closest('[data-mode]');if(!b)return;
+    state.mode=b.dataset.mode;
+    document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('active',x===b));
+    $('modeHint').textContent=modeHints[state.mode];
+  });
+  $('subjects').addEventListener('click',e=>{
+    const b=e.target.closest('[data-subject]');if(!b)return;
+    state.subject=b.dataset.subject;
+    document.querySelectorAll('[data-subject]').forEach(x=>x.classList.toggle('active',x===b));
+  });
+  $('question').addEventListener('input',()=> $('count').textContent=`${$('question').value.length} / 5000`);
+  $('addMore').addEventListener('click',()=> $('files').click());
+  $('clearPhotos').addEventListener('click',()=>{state.images=[];$('files').value='';renderPhotos()});
+  $('files').addEventListener('change',async()=>{
+    const selected=[...$('files').files];
+    for(const f of selected){
+      if(state.images.length>=10)break;
+      try{state.images.push(await fileToData(f))}catch(e){showError(e.message)}
+    }
+    $('files').value='';renderPhotos();
+  });
+
+  async function fileToData(file){
+    if(!file.type.startsWith('image/'))throw new Error('Only image files are supported.');
+    if(file.size>20*1024*1024)throw new Error('Each image must be under 20 MB.');
+    const url=URL.createObjectURL(file);
+    try{
+      const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url});
+      const max=1800,scale=Math.min(1,max/Math.max(img.width,img.height));
+      const c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.width*scale));c.height=Math.max(1,Math.round(img.height*scale));
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      return c.toDataURL('image/jpeg',.88);
+    } finally {URL.revokeObjectURL(url)}
+  }
+  function renderPhotos(){
+    $('photoStrip').innerHTML=state.images.map((src,i)=>`<div class="photo"><img src="${src}" alt="Homework image ${i+1}"><button type="button" data-remove="${i}" aria-label="Remove image">×</button></div>`).join('');
+  }
+  $('photoStrip').addEventListener('click',e=>{
+    const b=e.target.closest('[data-remove]');if(!b)return;
+    state.images.splice(Number(b.dataset.remove),1);renderPhotos();
+  });
+
+  function showError(msg){$('error').textContent=msg;$('error').classList.add('show')}
+  function hideError(){$('error').classList.remove('show')}
+  function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+  function showThinking(text,done=false){
+    $('inputArea').classList.add('hidden');
+    $('thinkingBox').classList.add('show');
+    $('thinkingBox').classList.toggle('done',done);
+    $('thinkingLabel').textContent=done?'model thinking':'model thinking…';
+    $('thinkingText').textContent=text;
+    $('needTitle').textContent='model thinking';
+    $('needMeta').textContent=done?'reasoning summary':'working on it';
+  }
+  function resetThinking(){
+    $('thinkingBox').classList.remove('show','done');
+    $('inputArea').classList.remove('hidden');
+    $('needTitle').textContent='what do you need?';
+    $('needMeta').textContent='optional with photos';
+  }
+
+  $('go').addEventListener('click',async()=>{
+    if($('thinkingBox').classList.contains('done')){resetThinking();$('go').textContent='Help me with this ✨';$('question').focus();return}
+    hideError();
+    const q=$('question').value.trim();
+    if(!q && !state.images.length)return showError('Add a question or at least one photo ♡');
+    $('go').disabled=true;$('go').textContent='Thinking…';
+    const progress=['Reading your request and photos…','Identifying the important information…','Working through the problem…','Checking the answer before I show it…'];
+    let pi=0;showThinking(progress[0]);
+    const timer=setInterval(()=>{pi=Math.min(pi+1,progress.length-1);showThinking(progress[pi])},850);
+    try{
+      const r=await fetch('https://blynwakebyyhlmsfjabm.supabase.co/functions/v1/solve-homework',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        question:q,images:state.images,mode:state.mode,subject:state.subject
+      })});
+      const data=await r.json().catch(()=>({}));
+      if(!r.ok)throw new Error(data.error||`Request failed (${r.status})`);
+      clearInterval(timer);
+      showThinking(data.thinking||data.reasoning||'I read the request, worked through the relevant information, and checked the result before answering.',true);
+      $('go').disabled=false;$('go').textContent='Ask another ✦';
+      $('result').classList.add('show');
+      $('resultMeta').textContent=state.subject;
+      if(state.mode==='quiz') renderQuiz(data.quiz||[]);
+      else renderAnswer(data.sections||[]);
+      setTimeout(()=>$('result').scrollIntoView({behavior:'smooth',block:'start'}),60);
+      return;
+    }catch(e){
+      clearInterval(timer);resetThinking();showError(e.message||'Something went wrong.');
+    }
+    $('go').disabled=false;$('go').textContent='Help me with this ✨';
+  });
+
+  function renderAnswer(sections){
+    $('quiz').classList.add('hidden');$('cards').classList.remove('hidden');$('resultTitle').textContent='your answer ♡';
+    $('cards').innerHTML=sections.map(s=>`<div class="answer-card ${s.type==='final'?'final-card':''}">
+      <h3>${esc(s.title)}</h3><div class="body">${esc(s.content)}</div></div>`).join('');
+  }
+
+  function renderQuiz(items){
+    $('cards').classList.add('hidden');$('quiz').classList.remove('hidden');$('resultTitle').textContent='quiz time 🎯';
+    let answered=0,score=0;
+    $('quiz').innerHTML=items.map((q,qi)=>`<div class="qcard" data-q="${qi}">
+      <h3>${qi+1}. ${esc(q.question)}</h3>
+      <div class="opts">${q.options.map((o,oi)=>`<button class="opt" type="button" data-qi="${qi}" data-oi="${oi}">${String.fromCharCode(65+oi)}. ${esc(o)}</button>`).join('')}</div>
+      <div class="feedback" id="fb-${qi}"></div>
+    </div>`).join('') + `<div class="quiz-score" id="scoreBox">0 / ${items.length} answered</div>`;
+
+    $('quiz').onclick=e=>{
+      const b=e.target.closest('.opt');if(!b||b.disabled)return;
+      const qi=Number(b.dataset.qi),oi=Number(b.dataset.oi),q=items[qi];
+      const card=$('quiz').querySelector(`[data-q="${qi}"]`);
+      card.querySelectorAll('.opt').forEach((x,idx)=>{x.disabled=true;if(idx===q.correctIndex)x.classList.add('correct')});
+      if(oi!==q.correctIndex)b.classList.add('wrong');else score++;
+      answered++;
+      $(`fb-${qi}`).textContent=q.explanation;
+      $('scoreBox').textContent=answered===items.length?`Score: ${score} / ${items.length}`:`${answered} / ${items.length} answered`;
+    };
+  }
+})();
+</script>
+</body>
+</html>

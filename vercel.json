@@ -1,0 +1,4 @@
+{
+  "version": 2,
+  "functions": { "api/solve.mjs": { "maxDuration": 60, "memory": 1024 } }
+}
