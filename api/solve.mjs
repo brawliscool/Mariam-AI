@@ -1,4 +1,4 @@
-const MODEL = process.env.DEEPSEEK_MODEL || "deepseek-v4-flash-vision-exp";
+const MODEL = process.env.DEEPSEEK_MODEL || "deepseek-v4.1-flash-expires-on-0910";
 const BASE_URL = (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com").replace(/\/$/, "");
 
 function promptFor(mode) {
