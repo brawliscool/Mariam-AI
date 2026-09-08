@@ -11,156 +11,105 @@ app.use(express.json({ limit: "45mb" }));
 app.use(express.static("."));
 
 const SUBJECT_PROMPTS = {
-  Math: `You are solving high-school math. Read notation, signs, exponents, fractions, radicals, graphs, labels, and units exactly.
-Choose the simplest valid method for the level of the problem. Show clean algebra with one logical change per step.
-Preserve exact values when useful, then give a decimal approximation only when it helps. Respect domain restrictions and units.
-If a standard formula, identity, theorem, or equation is genuinely used, include a "Formula Used" section before the steps. Write the general formula first, then the relevant substitution. Do not invent a formula section for simple arithmetic or factoring.
-Check the result by substitution, inverse operation, estimation, or another short verification when practical.`,
-  English: `You are helping with high-school English language arts. First determine whether the task is reading comprehension, literary analysis, grammar, vocabulary, revision, or writing.
-Base analysis on the provided passage or prompt. Never invent quotations, page numbers, citations, plot details, or evidence that is not visible or supplied.
-For analysis, give a clear claim and connect evidence to reasoning. For grammar/revision, explain the specific rule and preserve the student's intended meaning and voice.
-For writing, produce natural junior-level work that directly answers the assignment rather than sounding inflated or robotic.`,
-  Science: `You are helping with high-school science. Identify the relevant concept, known values, unknowns, units, and assumptions before solving.
-For quantitative problems, keep units throughout, convert units explicitly when needed, use appropriate significant figures, and sanity-check the magnitude.
-If a standard scientific equation or relationship is genuinely used, include a "Formula Used" section before the steps. Define variables when useful and show the substitution. Do not add a formula section to purely conceptual questions.
-For labs, diagrams, chemistry, biology, physics, and earth science, distinguish observations from conclusions and never invent measurements or labels that are unreadable.`,
-  History: `You are helping with high-school history and social studies. Prioritize chronology, cause and effect, historical context, comparison, continuity/change, and the exact wording of the question.
-Distinguish established facts from interpretation. Use evidence from supplied sources when present, but never fabricate quotations, dates, citations, or source details.
-For document-based questions, identify the source's claim, perspective, context, and useful evidence. Keep explanations concise and directly tied to the prompt.`,
-  Other: `You are helping with a high-school assignment in a subject that may not fit the main categories. Identify the discipline from the material and use its normal conventions.
-Follow the assignment wording closely, explain at a junior-year level, and never invent unreadable or missing information.`
+  Math: `You are solving high-school math. Read notation, signs, exponents, fractions, radicals, graphs, labels, and units exactly. Choose the simplest valid method. Show clean algebra with one logical change per step. A Formula Used section is allowed only when a specific formula, identity, theorem, or equation is actually applied to the current problem. Never list a general formula sheet.`,
+  English: `You are helping with high-school English language arts. Determine the task type and base analysis only on supplied material. Never invent quotations, page numbers, citations, plot details, or evidence. Keep the student's intended meaning and voice.`,
+  Science: `You are helping with high-school science. Identify the actual branch and task first. For quantitative problems, identify knowns, unknowns, units, and assumptions and keep units through the work. A Formula Used section is allowed only when a formula/equation is actually required by one of the current visible questions. Never output a general science formula list. For conceptual biology, ecology, genetics, vocabulary, classification, reading, or explanation questions, omit Formula Used unless an equation is genuinely used.`,
+  History: `You are helping with high-school history and social studies. Prioritize chronology, cause and effect, context, comparison, continuity/change, and the exact wording of the question. Never fabricate quotations, dates, citations, or source details.`,
+  Other: `You are helping with a high-school assignment in another subject. Identify the discipline and use its normal conventions. Follow the assignment wording closely and never invent unreadable or missing information.`
 };
 
-function subjectPrompt(subject) {
-  return SUBJECT_PROMPTS[subject] || SUBJECT_PROMPTS.Other;
-}
+function subjectPrompt(subject) { return SUBJECT_PROMPTS[subject] || SUBJECT_PROMPTS.Other; }
 
 function systemPrompt(mode, subject) {
   const common = `You are Study Spark, a careful tutor for a U.S. high-school junior.
 Read every attached image carefully and use all pages together when relevant.
-Never invent unreadable text. If anything important is unclear, say exactly what cannot be read instead of guessing.
-Return a short "thinking" field that summarizes the approach in plain language. It must be concise and useful, not hidden chain-of-thought.
-Subject-specific instructions:
-${subjectPrompt(subject)}`;
+Never invent unreadable text. If something necessary cannot be read, state exactly what is unreadable instead of guessing.
+If the image contains multiple numbered questions, answer EVERY readable numbered question completely unless the user explicitly asks for only some items.
+NEVER output placeholder text, unfinished lists, template filler, or ellipses. Never write partial entries. Every returned section must contain complete student-ready content.
+Do not create a redundant Final Answer card when an Answers card already contains the complete final answers to multiple questions.
+Return a short "thinking" field that summarizes the approach in plain language.
+Subject-specific instructions: ${subjectPrompt(subject)}`;
 
-  if (mode === "answer") return `${common}
-Return only the final answer the student needs in the sections array. Keep "thinking" to one short sentence and do not include steps or extra commentary.
-Output strict JSON:
-{"thinking":"Short approach summary.","sections":[{"type":"final","title":"Answer","content":"..."}]}`;
+  if (mode === "answer") return `${common}\nReturn only the complete final answer(s). For multiple numbered questions, return all answers in one complete numbered Answer section. Return strict JSON with keys thinking and sections.`;
+  if (mode === "quiz") return `${common}\nCreate a multiple-choice quiz with exactly four complete options per question and one correct answer. Return strict JSON with keys thinking and quiz. No placeholders or ellipses.`;
 
-  if (mode === "quiz") return `${common}
-Create an interactive multiple-choice quiz from the supplied text/images.
-Use 5 questions unless the user explicitly requests another count. Every question must have exactly 4 options and exactly one objectively correct answer.
-Return strict JSON only:
-{"thinking":"Short summary of what material the quiz covers.","quiz":[{"question":"...","options":["...","...","...","..."],"correctIndex":0,"explanation":"Short explanation of why the correct answer is correct."}]}`;
+  const modeText = mode === "teach" ? "Teach clearly and explain why the steps work." : mode === "check" ? "Check the student's work, identify the first mistake, and show the corrected solution." : "Solve carefully with concise numbered reasoning.";
+  return `${common}\n${modeText}\nFor a single problem, use only useful sections from summary, optional formula, steps, final. For multiple numbered problems, prefer one complete Answers section containing every numbered answer plus Steps only if needed. Formula Used may contain only formulas actually applied to the current problem(s), tied to the question number when there are several. Never list unrelated formulas. Never add Quick Check. Return strict JSON with keys thinking and sections.`;
+}
 
-  const modeText = mode === "teach"
-    ? "Teach the concept clearly in junior-year high-school language. Explain why the steps work."
-    : mode === "check"
-    ? "Check the student's work. Identify the first mistake, explain it, then show the corrected solution. If the work is correct, verify it independently."
-    : "Solve carefully and show concise, numbered reasoning.";
+function hasPlaceholder(value) {
+  const text = String(value || "").trim();
+  if (!text) return true;
+  return /(?:\.\.\.|…)|\b(?:placeholder|tbd|to be filled|insert answer|answer here)\b/i.test(text);
+}
 
-  return `${common}
-${modeText}
-Keep the output organized and easy to scan.
-For Math or Science, include a formula section only when a real formula/equation/theorem is actually used. For English, History, or Other, do not create a formula section unless the assignment itself explicitly involves one.
-Return strict JSON only in this schema:
-{"thinking":"Short plain-language summary of the approach.","sections":[
-  {"type":"summary","title":"What the problem is asking","content":"..."},
-  {"type":"formula","title":"Formula Used","content":"..."},
-  {"type":"steps","title":"Steps","content":"1. ...\\n2. ..."},
-  {"type":"final","title":"Final Answer","content":"..."}
-]}
-Omit sections that are unnecessary. Never add a Quick Check section.`;
+function normalizeSections(parsed, subject) {
+  if (!Array.isArray(parsed?.sections)) return [];
+  const sections = parsed.sections
+    .filter(s => s && s.content !== undefined && String(s.content).trim())
+    .map(s => ({ type: String(s.type || "note"), title: String(s.title || "Answer"), content: String(s.content).trim() }))
+    .filter(s => !/^quick\s*check$/i.test(s.title));
+  if (!sections.length || sections.some(s => hasPlaceholder(s.content) || hasPlaceholder(s.title))) return [];
+  return sections.filter(s => {
+    if (String(s.type).toLowerCase() !== "formula" && !/^formula\s*used$/i.test(s.title)) return true;
+    return subject === "Math" || subject === "Science";
+  });
+}
+
+function normalizeQuiz(parsed) {
+  if (!Array.isArray(parsed?.quiz)) return [];
+  return parsed.quiz.slice(0,20).filter(q => q && typeof q.question === "string" && !hasPlaceholder(q.question) && Array.isArray(q.options) && q.options.length === 4 && q.options.every(o => !hasPlaceholder(o)) && Number.isInteger(q.correctIndex) && q.correctIndex >= 0 && q.correctIndex < 4)
+    .map(q => ({ question:q.question, options:q.options.map(String), correctIndex:q.correctIndex, explanation:String(q.explanation || "") }));
 }
 
 app.post("/api/solve", async (req, res) => {
   try {
     if (!API_KEY) return res.status(500).json({ error: "Missing DEEPSEEK_API_KEY in .env" });
-
     const { question = "", images = [], mode = "solve", subject = "Other" } = req.body || {};
     if (!question.trim() && !images.length) return res.status(400).json({ error: "Add a question or image." });
     if (!Array.isArray(images) || images.length > 10) return res.status(400).json({ error: "You can upload up to 10 images at once." });
 
     const safeSubject = Object.prototype.hasOwnProperty.call(SUBJECT_PROMPTS, subject) ? subject : "Other";
-    const content = [{
-      type: "text",
-      text: `Subject: ${safeSubject}\nStudent level: high-school junior\nRequest: ${question.trim() || "Use the attached homework images."}`
-    }];
-
+    const content = [{ type:"text", text:`Subject: ${safeSubject}\nStudent level: high-school junior\nRequest: ${question.trim() || "Use the attached homework images."}` }];
     for (const img of images) {
-      if (typeof img !== "string" || !/^data:image\/(png|jpeg|jpg|webp|gif);base64,/i.test(img)) {
-        return res.status(400).json({ error: "Unsupported image format." });
-      }
-      content.push({ type: "image_url", image_url: { url: img, detail: "original" } });
+      if (typeof img !== "string" || !/^data:image\/(png|jpeg|jpg|webp|gif);base64,/i.test(img)) return res.status(400).json({ error:"Unsupported image format." });
+      content.push({ type:"image_url", image_url:{ url:img, detail:"original" } });
     }
 
-    const upstream = await fetch(`${BASE_URL}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        temperature: 0.15,
-        max_tokens: 3200,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: systemPrompt(mode, safeSubject) },
-          { role: "user", content }
-        ]
-      })
-    });
+    const baseMessages = [{ role:"system", content:systemPrompt(mode, safeSubject) }, { role:"user", content }];
+    let messages = baseMessages;
 
-    const data = await upstream.json().catch(() => ({}));
-    if (!upstream.ok) {
-      return res.status(upstream.status).json({
-        error: data?.error?.message || `DeepSeek API error (${upstream.status})`
+    for (let attempt=0; attempt<2; attempt++) {
+      const upstream = await fetch(`${BASE_URL}/chat/completions`, {
+        method:"POST",
+        headers:{ "Authorization":`Bearer ${API_KEY}`, "Content-Type":"application/json" },
+        body:JSON.stringify({ model:MODEL, temperature:0.12, max_tokens:attempt===0?5200:6500, response_format:{ type:"json_object" }, messages })
       });
+      const data = await upstream.json().catch(() => ({}));
+      if (!upstream.ok) return res.status(upstream.status).json({ error:data?.error?.message || `DeepSeek API error (${upstream.status})` });
+
+      const raw = data?.choices?.[0]?.message?.content || "";
+      let parsed = null;
+      try { parsed = JSON.parse(raw); } catch {}
+
+      if (mode === "quiz") {
+        const quiz = normalizeQuiz(parsed);
+        if (quiz.length) return res.json({ quiz, thinking:String(parsed?.thinking || "I used the supplied material to build the quiz."), model:MODEL });
+      } else {
+        const sections = normalizeSections(parsed, safeSubject);
+        if (sections.length) return res.json({ sections, thinking:String(parsed?.thinking || "I solved each readable item and checked the response for completeness."), model:MODEL });
+      }
+
+      messages = baseMessages.concat([
+        { role:"assistant", content:raw },
+        { role:"user", content:"Your previous response was incomplete or contained placeholder/ellipsis text. Rewrite the entire answer as valid JSON. Give complete student-ready content for every readable requested item. Do not use ellipses, placeholders, unfinished numbered lists, unrelated formulas, or a redundant final card." }
+      ]);
     }
 
-    const message = data?.choices?.[0]?.message || {};
-    const raw = message.content || "";
-    let parsed;
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      return res.status(502).json({ error: "The AI returned an invalid format. Try again." });
-    }
-
-    const thinking = String(parsed?.thinking || message?.reasoning_content || "I read the request, identified the relevant information, and checked the result before answering.");
-
-    if (mode === "quiz") {
-      const quiz = Array.isArray(parsed.quiz)
-        ? parsed.quiz.slice(0, 20).filter(q =>
-            q && typeof q.question === "string" && Array.isArray(q.options) && q.options.length === 4 &&
-            Number.isInteger(q.correctIndex) && q.correctIndex >= 0 && q.correctIndex < 4
-          ).map(q => ({
-            question: q.question,
-            options: q.options.map(String),
-            correctIndex: q.correctIndex,
-            explanation: String(q.explanation || "")
-          }))
-        : [];
-
-      if (!quiz.length) return res.status(502).json({ error: "The AI did not return a valid quiz." });
-      return res.json({ quiz, thinking, model: MODEL });
-    }
-
-    const sections = Array.isArray(parsed.sections)
-      ? parsed.sections.filter(s => s && s.content).map(s => ({
-          type: String(s.type || "note"),
-          title: String(s.title || "Answer"),
-          content: String(s.content)
-        }))
-      : [];
-
-    if (!sections.length) return res.status(502).json({ error: "The AI did not return a valid answer." });
-    return res.json({ sections, thinking, model: MODEL });
+    return res.status(502).json({ error:"The AI returned an incomplete answer. Please try again with a clearer photo." });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "The server could not complete that request." });
+    return res.status(500).json({ error:"The server could not complete that request." });
   }
 });
 
