@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#100d16" />
+  <meta name="color-scheme" content="dark" />
   <title>Study Spark ♡</title>
   <style>
     :root{
@@ -12,13 +13,14 @@
       --shadow:0 18px 46px rgba(0,0,0,.28);--r:24px;
     }
     *{box-sizing:border-box}
+    html{min-height:100%;background:#100d16;color-scheme:dark}
     body{margin:0;background:
       radial-gradient(circle at 10% 4%,rgba(255,77,151,.16),transparent 28%),
       radial-gradient(circle at 91% 5%,rgba(135,105,255,.18),transparent 28%),
       linear-gradient(180deg,#100d16,#15101c 48%,#0f0c14);
-      color:var(--ink);font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,sans-serif;min-height:100vh}
+      background-color:#100d16;color:var(--ink);font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,sans-serif;min-height:100vh;min-height:100dvh;overscroll-behavior-y:none}
     button,input,textarea{font:inherit} button{cursor:pointer}
-    .app{max-width:860px;margin:auto;padding:max(16px,env(safe-area-inset-top)) 14px max(28px,env(safe-area-inset-bottom))}
+    .app{max-width:860px;margin:auto;padding:max(16px,env(safe-area-inset-top)) 14px max(28px,env(safe-area-inset-bottom));min-height:100vh;min-height:100dvh}
     .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
     .brand{display:flex;align-items:center;gap:9px;font-weight:950;font-size:1.18rem}
     .mark{width:40px;height:40px;border-radius:14px;background:linear-gradient(145deg,#ff6ea9,#8f7cff);display:grid;place-items:center;box-shadow:0 10px 25px rgba(255,110,169,.17)}
@@ -242,7 +244,8 @@
 
   function renderAnswer(sections){
     $('quiz').classList.add('hidden');$('cards').classList.remove('hidden');$('resultTitle').textContent='your answer ♡';
-    $('cards').innerHTML=sections.map(s=>`<div class="answer-card ${s.type==='final'?'final-card':''}">
+    const visibleSections=sections.filter(s=>!/^quick\s*check$/i.test(String(s.title||'').trim()));
+    $('cards').innerHTML=visibleSections.map(s=>`<div class="answer-card ${s.type==='final'?'final-card':''}">
       <h3>${esc(s.title)}</h3><div class="body">${esc(s.content)}</div></div>`).join('');
   }
 
