@@ -43,11 +43,7 @@
     .upload .ico{font-size:1.55rem;margin-bottom:6px}.upload strong{display:block}.upload small{color:var(--muted);font-weight:700;line-height:1.35}
     .photo-strip{display:flex;gap:9px;overflow:auto;padding:10px 1px 2px;scrollbar-width:none}.photo-strip::-webkit-scrollbar{display:none}
     .photo{width:92px;height:92px;flex:0 0 92px;border-radius:17px;overflow:hidden;position:relative;border:1px solid var(--line);background:#19151f}
-    .photo.blurry{border-color:rgba(255,183,107,.58);box-shadow:0 0 0 2px rgba(255,183,107,.08)}
     .photo img{width:100%;height:100%;object-fit:cover}.photo button{position:absolute;top:5px;right:5px;width:28px;height:28px;border:0;border-radius:10px;background:rgba(20,16,27,.9);color:#fff;font-weight:950}
-    .blur-badge{position:absolute;left:5px;bottom:5px;padding:4px 7px;border-radius:8px;background:rgba(65,42,25,.92);border:1px solid rgba(255,183,107,.32);color:#ffd0a0;font-size:.58rem;font-weight:950;line-height:1}
-    .quality-warning{display:none;margin:9px 0 2px;padding:10px 12px;border-radius:13px;background:rgba(161,93,37,.14);border:1px solid rgba(255,183,107,.26);color:#ffd0a0;font-size:.72rem;font-weight:800;line-height:1.4}
-    .quality-warning.show{display:block}
     .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}.soft{padding:11px 9px;color:var(--ink)}
     textarea{width:100%;min-height:110px;resize:vertical;border:1px solid var(--line);border-radius:19px;background:#18131f;padding:14px 15px;outline:none;color:var(--ink);font-weight:650;line-height:1.5}
     textarea::placeholder{color:#746c7d}textarea:focus{border-color:rgba(255,110,169,.55);box-shadow:0 0 0 4px rgba(255,110,169,.08)}
@@ -115,7 +111,6 @@
         <small>Worksheet pages, textbook questions, handwritten work, graphs, diagrams…</small>
       </div>
       <div id="photoStrip" class="photo-strip"></div>
-      <div id="qualityWarning" class="quality-warning" role="status">⚠️ One or more photos may be blurry. Retake them if the text looks hard to read for a more accurate answer.</div>
       <div class="row2">
         <button class="soft" id="addMore" type="button">＋ Add more</button>
         <button class="soft" id="clearPhotos" type="button">Clear photos</button>
@@ -147,7 +142,7 @@
 
 <script>
 (() => {
-  const state={mode:'solve',subject:'Math',images:[],imageQuality:[]};
+  const state={mode:'solve',subject:'Math',images:[]};
   const $=id=>document.getElementById(id);
   const modeHints={
     solve:'You’ll get a clean answer with organized steps.',
@@ -178,7 +173,6 @@
       try{
         const processed=await fileToData(f);
         state.images.push(processed.data);
-        state.imageQuality.push({blurry:processed.blurry,sharpness:processed.sharpness});
       }catch(e){showError(e.message)}
     }
     $('files').value='';renderPhotos();
@@ -186,34 +180,8 @@
 
   function clearSelectedPhotos(){
     state.images=[];
-    state.imageQuality=[];
     $('files').value='';
     renderPhotos();
-  }
-
-  function estimateSharpness(img){
-    const max=420,scale=Math.min(1,max/Math.max(img.width,img.height));
-    const c=document.createElement('canvas');
-    c.width=Math.max(8,Math.round(img.width*scale));
-    c.height=Math.max(8,Math.round(img.height*scale));
-    const ctx=c.getContext('2d',{willReadFrequently:true});
-    ctx.drawImage(img,0,0,c.width,c.height);
-    const pixels=ctx.getImageData(0,0,c.width,c.height).data;
-    const gray=new Float32Array(c.width*c.height);
-    for(let i=0,p=0;i<pixels.length;i+=4,p++){
-      gray[p]=pixels[i]*.299+pixels[i+1]*.587+pixels[i+2]*.114;
-    }
-    let sum=0,sumSq=0,n=0;
-    for(let y=1;y<c.height-1;y++){
-      for(let x=1;x<c.width-1;x++){
-        const i=y*c.width+x;
-        const lap=4*gray[i]-gray[i-1]-gray[i+1]-gray[i-c.width]-gray[i+c.width];
-        sum+=lap;sumSq+=lap*lap;n++;
-      }
-    }
-    if(!n)return 0;
-    const mean=sum/n;
-    return Math.max(0,sumSq/n-mean*mean);
   }
 
   async function fileToData(file){
@@ -222,29 +190,23 @@
     const url=URL.createObjectURL(file);
     try{
       const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url});
-      const sharpness=estimateSharpness(img);
-      const blurry=sharpness<70;
       const max=1800,scale=Math.min(1,max/Math.max(img.width,img.height));
       const c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.width*scale));c.height=Math.max(1,Math.round(img.height*scale));
       c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-      return {data:c.toDataURL('image/jpeg',.88),blurry,sharpness};
+      return c.toDataURL('image/jpeg',.88);
     } finally {URL.revokeObjectURL(url)}
   }
   function renderPhotos(){
-    $('photoStrip').innerHTML=state.images.map((src,i)=>{
-      const blurry=Boolean(state.imageQuality[i]?.blurry);
-      return `<div class="photo ${blurry?'blurry':''}"><img src="${src}" alt="Homework image ${i+1}">${blurry?'<span class="blur-badge">⚠ blurry?</span>':''}<button type="button" data-remove="${i}" aria-label="Remove image">×</button></div>`;
-    }).join('');
+    $('photoStrip').innerHTML=state.images.map((src,i)=>
+      `<div class="photo"><img src="${src}" alt="Homework image ${i+1}"><button type="button" data-remove="${i}" aria-label="Remove image">×</button></div>`
+    ).join('');
     const hasImages=state.images.length>0;
-    const hasBlurry=state.imageQuality.some(q=>q?.blurry);
     $('uploadBox').classList.toggle('hidden',hasImages);
-    $('qualityWarning').classList.toggle('show',hasBlurry);
   }
   $('photoStrip').addEventListener('click',e=>{
     const b=e.target.closest('[data-remove]');if(!b)return;
     const i=Number(b.dataset.remove);
     state.images.splice(i,1);
-    state.imageQuality.splice(i,1);
     renderPhotos();
   });
 
