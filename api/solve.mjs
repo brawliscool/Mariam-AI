@@ -1,37 +1,14 @@
 const MODEL = process.env.DEEPSEEK_MODEL || "deepseek-v4.1-flash-expires-on-0910";
 const BASE_URL = (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com").replace(/\/$/, "");
 
-const SUBJECT_PROMPTS = {
-  Math: `You are solving high-school math. Read notation, signs, exponents, fractions, radicals, graphs, labels, and units exactly.
-Choose the simplest valid method. Show clean algebra with one logical change per step. Preserve exact values when useful and respect domain restrictions and units.
-A Formula Used section is allowed only when a specific standard formula, identity, theorem, or equation is actually applied to the current problem. Never list a general math formula sheet. If included, show only the formula(s) actually used and the relevant substitution.
-Check the result by substitution, inverse operation, estimation, or another short verification when practical.`,
-  English: `You are helping with high-school English language arts. Determine whether the task is reading comprehension, literary analysis, grammar, vocabulary, revision, or writing.
-Base analysis only on the supplied passage or prompt. Never invent quotations, page numbers, citations, plot details, or evidence.
-For analysis, give a clear claim and connect evidence to reasoning. For grammar/revision, explain the rule and preserve the student's intended meaning and voice. For writing, produce natural junior-level work that directly answers the assignment.`,
-  Science: `You are helping with high-school science. Identify the actual branch and task first: biology, chemistry, physics, earth/environmental science, anatomy, genetics, lab work, or another science area.
-For quantitative problems, identify known values, unknowns, units, and assumptions; keep units through the work; convert units explicitly when needed; use appropriate significant figures; sanity-check the magnitude.
-A Formula Used section is allowed only when a formula/equation is actually required by one of the current visible questions. Never output a general science formula list. For conceptual biology, ecology, genetics, vocabulary, classification, reading, or explanation questions, omit Formula Used unless an equation is genuinely used.
-If multiple questions are visible, solve each numbered item completely and keep formulas tied to the specific item that uses them. Never invent measurements, labels, or unreadable text.`,
-  History: `You are helping with high-school history and social studies. Prioritize chronology, cause and effect, context, comparison, continuity/change, and the exact wording of the question.
-Distinguish established facts from interpretation. Use supplied sources when present, but never fabricate quotations, dates, citations, or source details. For document-based questions, identify the source's claim, perspective, context, and useful evidence.`,
-  Other: `You are helping with a high-school assignment in another subject. Identify the discipline from the material and use its normal conventions. Follow the assignment wording closely, explain at a junior-year level, and never invent unreadable or missing information.`
-};
-
-function subjectPrompt(subject) {
-  return SUBJECT_PROMPTS[subject] || SUBJECT_PROMPTS.Other;
-}
-
-function promptFor(mode, subject) {
+function promptFor(mode) {
   const common = `You are Study Spark, a careful tutor for a U.S. high-school junior.
 Read every attached image carefully and use all pages together when relevant.
 Never invent unreadable text. If something necessary cannot be read, state exactly what is unreadable instead of guessing.
 If the image contains multiple numbered questions, answer EVERY readable numbered question completely. Do not stop after one or two items unless the user explicitly asks for only those items.
 NEVER output placeholder text, unfinished lists, template filler, or ellipses such as three dots or the single ellipsis character. Never write partial entries like "1. answer..." or "2. ...". Every returned section must contain complete student-ready content.
 Do not create a redundant Final Answer card when an Answers card already contains the complete final answers to multiple questions.
-Return a short "thinking" field that summarizes the approach in plain language. It must be concise and useful, not hidden chain-of-thought.
-Subject-specific instructions:
-${subjectPrompt(subject)}`;
+Return a short "thinking" field that summarizes the approach in plain language. It must be concise and useful, not hidden chain-of-thought.`;
 
   if (mode === "answer") return `${common}
 Return only the complete final answer(s) the student needs. For multiple numbered questions, return all answers in one complete numbered Answer section. No steps or extra commentary.
@@ -144,7 +121,7 @@ export default async function handler(req, res) {
     if (!question.trim() && !images.length) return res.status(400).json({ error: "Add a question or image." });
     if (!Array.isArray(images) || images.length > 10) return res.status(400).json({ error: "You can upload up to 10 images at once." });
 
-    const safeSubject = Object.prototype.hasOwnProperty.call(SUBJECT_PROMPTS, subject) ? subject : "Other";
+    const safeSubject = ["Math", "English", "Science", "History", "Other"].includes(subject) ? subject : "Other";
     const content = [{ type: "text", text: "Subject: " + safeSubject + "\nStudent level: high-school junior\nRequest: " + (question.trim() || "Use the attached homework images.") }];
     for (const img of images) {
       if (typeof img !== "string" || !/^data:image\/(png|jpeg|jpg|webp|gif);base64,/i.test(img)) return res.status(400).json({ error: "Unsupported image format." });
@@ -152,7 +129,7 @@ export default async function handler(req, res) {
     }
 
     const baseMessages = [
-      { role: "system", content: promptFor(mode, safeSubject) },
+      { role: "system", content: promptFor(mode) },
       { role: "user", content }
     ];
     let messages = baseMessages;
