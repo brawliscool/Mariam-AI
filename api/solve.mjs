@@ -65,6 +65,141 @@ Return strict JSON only in this schema:
 Omit sections that are unnecessary. Never add a Quick Check section.`;
 }
 
+
+function contentText(value) {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value.map(contentText).filter(Boolean).join(" ");
+  if (value && typeof value === "object") {
+    if (typeof value.text === "string") return value.text;
+    if (typeof value.content === "string") return value.content;
+  }
+  return "";
+}
+
+function cleanModelText(value) {
+  const fence = String.fromCharCode(96).repeat(3);
+  return value
+    .replace(/<think>[\s\S]*?<\/think>/gi, "")
+    .split(fence).join("")
+    .replace(/^json\s*/i, "")
+    .trim();
+}
+
+function extractJson(value) {
+  const text = cleanModelText(value);
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {}
+
+  for (let start = 0; start < text.length; start++) {
+    if (text[start] !== "{" && text[start] !== "[") continue;
+    const stack = [];
+    let inString = false;
+    let escaped = false;
+
+    for (let index = start; index < text.length; index++) {
+      const character = text[index];
+
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (character.charCodeAt(0) === 92) escaped = true;
+        else if (character === "\"") inString = false;
+        continue;
+      }
+
+      if (character === "\"") inString = true;
+      else if (character === "{" || character === "[") stack.push(character);
+      else if (character === "}" || character === "]") {
+        const expected = character === "}" ? "{" : "[";
+        if (stack.pop() !== expected) break;
+        if (!stack.length) {
+          try {
+            return JSON.parse(text.slice(start, index + 1));
+          } catch {
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function parseModelPayload(message) {
+  const content = contentText(message.content);
+  const reasoning = contentText(message.reasoning_content);
+  for (const candidate of [content, reasoning]) {
+    const parsed = extractJson(candidate);
+    if (parsed !== null) return { parsed, content: cleanModelText(content) };
+  }
+  return { parsed: null, content: cleanModelText(content) };
+}
+
+function normalizeSections(parsed, fallback) {
+  const sections = Array.isArray(parsed?.sections)
+    ? parsed.sections
+        .filter(section => section && section.content !== undefined && String(section.content).trim())
+        .map(section => ({
+          type: String(section.type || "note"),
+          title: String(section.title || "Answer"),
+          content: String(section.content)
+        }))
+    : [];
+
+  if (sections.length) return sections;
+
+  const direct = [parsed?.answer, parsed?.final_answer, parsed?.content, parsed?.response, parsed?.text]
+    .find(value => typeof value === "string" && value.trim());
+
+  if (direct) return [{ type: "final", title: "Answer", content: String(direct).trim() }];
+  if (fallback.trim()) return [{ type: "final", title: "Answer", content: fallback.trim() }];
+  return [];
+}
+
+function normalizeQuiz(parsed) {
+  return Array.isArray(parsed?.quiz)
+    ? parsed.quiz
+        .slice(0, 20)
+        .filter(question =>
+          question &&
+          typeof question.question === "string" &&
+          Array.isArray(question.options) &&
+          question.options.length === 4 &&
+          Number.isInteger(question.correctIndex) &&
+          question.correctIndex >= 0 &&
+          question.correctIndex < 4
+        )
+        .map(question => ({
+          question: question.question,
+          options: question.options.map(String),
+          correctIndex: question.correctIndex,
+          explanation: String(question.explanation || "")
+        }))
+    : [];
+}
+
+async function callModel(apiKey, messages, jsonMode, maxTokens) {
+  const requestBody = {
+    model: MODEL,
+    temperature: 0.15,
+    max_tokens: maxTokens,
+    messages
+  };
+  if (jsonMode) requestBody.response_format = { type: "json_object" };
+
+  return fetch(BASE_URL + "/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer " + apiKey,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(requestBody)
+  });
+}
+
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed." });
   if (!process.env.DEEPSEEK_API_KEY) return res.status(500).json({ error: "Missing DEEPSEEK_API_KEY environment variable." });
@@ -77,7 +212,7 @@ export default async function handler(req, res) {
     const safeSubject = Object.prototype.hasOwnProperty.call(SUBJECT_PROMPTS, subject) ? subject : "Other";
     const content = [{
       type: "text",
-      text: `Subject: ${safeSubject}\nStudent level: high-school junior\nRequest: ${question.trim() || "Use the attached homework images."}`
+      text: "Subject: " + safeSubject + "\nStudent level: high-school junior\nRequest: " + (question.trim() || "Use the attached homework images.")
     }];
 
     for (const img of images) {
@@ -87,60 +222,51 @@ export default async function handler(req, res) {
       content.push({ type: "image_url", image_url: { url: img, detail: "original" } });
     }
 
-    const upstream = await fetch(BASE_URL + "/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: "Bearer " + process.env.DEEPSEEK_API_KEY,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        temperature: 0.15,
-        max_tokens: 3200,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: promptFor(mode, safeSubject) },
-          { role: "user", content }
-        ]
-      })
-    });
+    const messages = [
+      { role: "system", content: promptFor(mode, safeSubject) },
+      { role: "user", content }
+    ];
 
-    const data = await upstream.json().catch(() => ({}));
-    if (!upstream.ok) {
-      return res.status(upstream.status).json({ error: data?.error?.message || `DeepSeek API error (${upstream.status})` });
+    let lastContent = "";
+
+    for (const jsonMode of [true, false]) {
+      const upstream = await callModel(process.env.DEEPSEEK_API_KEY, messages, jsonMode, jsonMode ? 4200 : 5200);
+      const data = await upstream.json().catch(() => ({}));
+
+      if (!upstream.ok) {
+        if (jsonMode) continue;
+        return res.status(upstream.status).json({ error: data?.error?.message || ("DeepSeek API error (" + upstream.status + ")") });
+      }
+
+      const message = data?.choices?.[0]?.message || {};
+      const parsedResult = parseModelPayload(message);
+      lastContent = parsedResult.content;
+
+      if (mode === "quiz") {
+        const quiz = normalizeQuiz(parsedResult.parsed);
+        if (quiz.length) {
+          const thinking = String(parsedResult.parsed?.thinking || "I read the material and built questions from the key concepts.");
+          return res.json({ quiz, thinking, model: MODEL });
+        }
+      } else {
+        const sections = normalizeSections(parsedResult.parsed, parsedResult.content);
+        if (sections.length) {
+          const thinking = String(parsedResult.parsed?.thinking || "I read the request, worked through the relevant information, and checked the result before answering.");
+          return res.json({ sections, thinking, model: MODEL });
+        }
+      }
     }
 
-    const message = data?.choices?.[0]?.message || {};
-    const parsed = JSON.parse(message.content || "{}");
-    const thinking = String(parsed?.thinking || message?.reasoning_content || "I read the request, identified the relevant information, and checked the result before answering.");
-
-    if (mode === "quiz") {
-      const quiz = Array.isArray(parsed.quiz)
-        ? parsed.quiz.slice(0, 20).filter(q =>
-            q && typeof q.question === "string" && Array.isArray(q.options) && q.options.length === 4 &&
-            Number.isInteger(q.correctIndex) && q.correctIndex >= 0 && q.correctIndex < 4
-          ).map(q => ({
-            question: q.question,
-            options: q.options.map(String),
-            correctIndex: q.correctIndex,
-            explanation: String(q.explanation || "")
-          }))
-        : [];
-
-      if (!quiz.length) return res.status(502).json({ error: "The AI did not return a valid quiz." });
-      return res.json({ quiz, thinking, model: MODEL });
+    if (mode === "quiz") return res.status(502).json({ error: "The AI did not return a valid quiz. Please try again." });
+    if (lastContent) {
+      return res.json({
+        sections: [{ type: "final", title: "Answer", content: lastContent }],
+        thinking: "I read the request and prepared the answer.",
+        model: MODEL
+      });
     }
 
-    const sections = Array.isArray(parsed.sections)
-      ? parsed.sections.filter(s => s && s.content).map(s => ({
-          type: String(s.type || "note"),
-          title: String(s.title || "Answer"),
-          content: String(s.content)
-        }))
-      : [];
-
-    if (!sections.length) return res.status(502).json({ error: "The AI did not return a valid answer." });
-    return res.json({ sections, thinking, model: MODEL });
+    return res.status(502).json({ error: "The AI did not return a readable answer. Please try again." });
   } catch (e) {
     console.error(e);
     return res.status(502).json({ error: "The AI returned an invalid response. Try again." });
