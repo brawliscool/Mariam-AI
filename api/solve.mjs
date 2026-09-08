@@ -2,35 +2,30 @@ const MODEL = process.env.DEEPSEEK_MODEL || "deepseek-v4.1-flash-expires-on-0910
 const BASE_URL = (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com").replace(/\/$/, "");
 
 function promptFor(mode) {
-  const common = `You are Study Spark, a careful tutor for a U.S. high-school junior.
-Read every attached image carefully and use all pages together when relevant.
-Never invent unreadable text. If something necessary cannot be read, state exactly what is unreadable instead of guessing.
-If the image contains multiple numbered questions, answer EVERY readable numbered question completely. Do not stop after one or two items unless the user explicitly asks for only those items.
-NEVER output placeholder text, unfinished lists, template filler, or ellipses such as three dots or the single ellipsis character. Never write partial entries like "1. answer..." or "2. ...". Every returned section must contain complete student-ready content.
-Do not create a redundant Final Answer card when an Answers card already contains the complete final answers to multiple questions.
-Return a short "thinking" field that summarizes the approach in plain language. It must be concise and useful, not hidden chain-of-thought.`;
+  const common =
+    "You are Study Spark, a homework helper for a high-school student.\n" +
+    "Be extremely concise. Give only the answer needed, with no introductions, restatement, long explanations, or repeated conclusion.\n" +
+    "For multiple questions, use one compact numbered list. Aim for 1-2 short sentences or fewer than 30 words per numbered problem.\n" +
+    "For math and science, show only the essential equation or work and the result. Do not create separate formula sections unless absolutely necessary.\n" +
+    "If something is unreadable, say so briefly instead of guessing.\n" +
+    "Return a one-sentence thinking summary only; never reveal hidden chain-of-thought.";
 
-  if (mode === "answer") return `${common}
-Return only the complete final answer(s) the student needs. For multiple numbered questions, return all answers in one complete numbered Answer section. No steps or extra commentary.
-Return strict JSON with keys "thinking" and "sections". The sections array must contain one object with type "final", title "Answer", and complete content. Do not use placeholder examples.`;
+  if (mode === "answer") {
+    return common + "\nReturn strict JSON with thinking and one final sections item titled Answer. Give only concise final answers.";
+  }
 
-  if (mode === "quiz") return `${common}
-Create an interactive multiple-choice quiz from the supplied text/images. Use 5 questions unless another count is requested. Every question must have exactly 4 complete options and exactly one objectively correct answer.
-Return strict JSON with keys "thinking" and "quiz". Each quiz item must include question, options, correctIndex, and explanation. No placeholders or ellipses.`;
+  if (mode === "quiz") {
+    return common + "\nCreate 5 concise multiple-choice questions with 4 short options each. Return strict JSON with thinking and quiz.";
+  }
 
   const modeText = mode === "teach"
-    ? "Teach the concept clearly in junior-year high-school language and explain why the steps work."
+    ? "Teach briefly, using no more than two short sentences per item."
     : mode === "check"
-    ? "Check the student's work. Identify the first mistake, explain it, then show the corrected solution. If correct, verify it independently."
-    : "Solve carefully and show concise, numbered reasoning.";
+    ? "State the mistake and correction briefly, in one or two short sentences."
+    : "Solve briefly. Show only essential work and the final result.";
 
-  return `${common}
-${modeText}
-Keep the output organized and easy to scan.
-For a SINGLE problem, use only the useful sections from: summary, optional formula, steps, final.
-For MULTIPLE numbered problems, prefer one complete Answers section (type "final", title "Answers") containing every numbered answer, plus Steps only if needed. Do not add another Final Answer section that merely repeats the Answers section.
-Formula Used rules: include a formula section only when a formula/equation/theorem is ACTUALLY applied in the solution. Include only the exact formula(s) used for the current problem(s), and identify the question number when there are multiple problems. Never list unrelated formulas just because they belong to the selected subject.
-Return strict JSON with keys "thinking" and "sections". Each section object must have type, title, and complete content. Never add Quick Check. Never use placeholders or ellipses.`;
+  return common + "\n" + modeText +
+    "\nReturn strict JSON with thinking and sections. Prefer one compact final section titled Answers containing all answers. Do not repeat answers in another section.";
 }
 
 function contentText(value) {
@@ -135,7 +130,7 @@ export default async function handler(req, res) {
     let messages = baseMessages;
 
     for (let attempt = 0; attempt < 2; attempt++) {
-      const upstream = await callModel(process.env.DEEPSEEK_API_KEY, messages, true, attempt === 0 ? 5200 : 6500);
+      const upstream = await callModel(process.env.DEEPSEEK_API_KEY, messages, attempt === 0, attempt === 0 ? 2400 : 3200);
       const data = await upstream.json().catch(() => ({}));
       if (!upstream.ok) return res.status(upstream.status).json({ error: data?.error?.message || ("DeepSeek API error (" + upstream.status + ")") });
 
