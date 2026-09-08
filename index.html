@@ -196,7 +196,7 @@
 
   function showError(msg){$('error').textContent=msg;$('error').classList.add('show')}
   function hideError(){$('error').classList.remove('show')}
-  function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+  function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[m]))}
   function showThinking(text,done=false){
     $('inputArea').classList.add('hidden');
     $('thinkingBox').classList.add('show');
@@ -235,6 +235,9 @@
       $('resultMeta').textContent=state.subject;
       if(state.mode==='quiz') renderQuiz(data.quiz||[]);
       else renderAnswer(data.sections||[]);
+      state.images=[];
+      $('files').value='';
+      renderPhotos();
       setTimeout(()=>$('result').scrollIntoView({behavior:'smooth',block:'start'}),60);
       return;
     }catch(e){
