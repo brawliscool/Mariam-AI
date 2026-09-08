@@ -103,7 +103,7 @@
   <div class="work">
     <section class="panel">
       <div class="head"><h2>add homework photos</h2><span>multiple allowed</span></div>
-      <div class="upload">
+      <div class="upload" id="uploadBox">
         <input id="files" type="file" accept="image/*" multiple />
         <div class="ico">📸</div><strong>Choose one or more images</strong>
         <small>Worksheet pages, textbook questions, handwritten work, graphs, diagrams…</small>
@@ -187,6 +187,7 @@
   }
   function renderPhotos(){
     $('photoStrip').innerHTML=state.images.map((src,i)=>`<div class="photo"><img src="${src}" alt="Homework image ${i+1}"><button type="button" data-remove="${i}" aria-label="Remove image">×</button></div>`).join('');
+    $('uploadBox').classList.toggle('hidden',state.images.length>0);
   }
   $('photoStrip').addEventListener('click',e=>{
     const b=e.target.closest('[data-remove]');if(!b)return;
