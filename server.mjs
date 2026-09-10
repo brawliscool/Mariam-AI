@@ -4,7 +4,12 @@ import "dotenv/config";
 const app = express();
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.DEEPSEEK_API_KEY;
-const MODEL = process.env.DEEPSEEK_MODEL || "deepseek-v4.1-flash-expires-on-0910";
+const configuredModel = process.env.DEEPSEEK_MODEL?.trim();
+// deepseek-flash is the stable API ID for DeepSeek-V4.1-Flash.
+// Ignore the temporary pre-release alias if it remains in an environment secret.
+const MODEL = configuredModel && configuredModel !== "deepseek-v4.1-flash-expires-on-0910"
+  ? configuredModel
+  : "deepseek-flash";
 const BASE_URL = (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com").replace(/\/$/, "");
 
 app.use(express.json({ limit: "45mb" }));
