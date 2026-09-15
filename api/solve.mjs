@@ -99,11 +99,18 @@ function normalizeQuiz(parsed) {
 async function callModel(apiKey, messages, jsonMode, maxTokens) {
   const body = { model: MODEL, temperature: 0.12, max_tokens: maxTokens, messages };
   if (jsonMode) body.response_format = { type: "json_object" };
-  return fetch(BASE_URL + "/chat/completions", {
-    method: "POST",
-    headers: { Authorization: "Bearer " + apiKey, "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 60000);
+  try {
+    return await fetch(BASE_URL + "/chat/completions", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export default async function handler(req, res) {
@@ -144,10 +151,8 @@ export default async function handler(req, res) {
         if (sections.length) return res.json({ sections, thinking: String(result.parsed?.thinking || "I read the request, solved each readable item, and checked the response for completeness."), model: MODEL });
       }
 
-      const previous = result.content || JSON.stringify(result.parsed || {});
       messages = baseMessages.concat([
-        { role: "assistant", content: previous },
-        { role: "user", content: "Your previous response was incomplete or contained placeholder/ellipsis text. Rewrite the entire answer as valid JSON. Give complete student-ready content for every requested item that is present. Do not use ellipses, placeholders, unfinished numbered lists, unrelated formulas, or a redundant final card." }
+        { role: "user", content: "Return valid JSON only. Give complete student-ready content for every requested item that is present. Do not use ellipses, placeholders, unfinished numbered lists, unrelated formulas, or a redundant final card." }
       ]);
     }
 
