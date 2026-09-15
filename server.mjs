@@ -15,6 +15,13 @@ const BASE_URL = (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com").r
 app.use(express.json({ limit: "45mb" }));
 app.use(express.static("."));
 
+async function fetchWithTimeout(url, options, ms = 60000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try { return await fetch(url, { ...options, signal: controller.signal }); }
+  finally { clearTimeout(timer); }
+}
+
 function systemPrompt(mode) {
   const common =
     "You are Study Spark, a homework helper for a high-school student.\n" +
@@ -79,7 +86,7 @@ app.post("/api/solve", async (req, res) => {
     let messages = baseMessages;
 
     for (let attempt=0; attempt<2; attempt++) {
-      const upstream = await fetch(`${BASE_URL}/chat/completions`, {
+      const upstream = await fetchWithTimeout(`${BASE_URL}/chat/completions`, {
         method:"POST",
         headers:{ "Authorization":`Bearer ${API_KEY}`, "Content-Type":"application/json" },
         body:JSON.stringify({ model:MODEL, temperature:0.12, max_tokens:attempt===0?2400:3200, response_format:{ type:"json_object" }, messages })
@@ -100,8 +107,7 @@ app.post("/api/solve", async (req, res) => {
       }
 
       messages = baseMessages.concat([
-        { role:"assistant", content:raw },
-        { role:"user", content:"Your previous response was incomplete or contained placeholder/ellipsis text. Rewrite the entire answer as valid JSON. Give complete student-ready content for every requested item that is present. Do not use ellipses, placeholders, unfinished numbered lists, unrelated formulas, or a redundant final card." }
+        { role:"user", content:"Return valid JSON only. Give complete student-ready content for every requested item that is present. Do not use ellipses, placeholders, unfinished numbered lists, unrelated formulas, or a redundant final card." }
       ]);
     }
 
